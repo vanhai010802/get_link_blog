@@ -107,8 +107,8 @@
 
     header {
       display: flex;
-      align-items: end;
-      justify-content: space-between;
+      align-items: stretch;
+      flex-direction: column;
       gap: 24px;
       margin-bottom: 30px;
     }
@@ -133,7 +133,8 @@
     }
 
     .date-card {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(160px, 1.3fr) minmax(150px, 1.2fr) repeat(3, minmax(0, 1fr));
       align-items: end;
       gap: 10px;
       flex: 0 0 auto;
@@ -188,14 +189,6 @@
       border-radius: 9px;
       background: #fffaf0;
       cursor: pointer;
-    }
-
-    .date-field:nth-child(2) input {
-      width: 88px;
-    }
-
-    .date-field:last-child select {
-      width: 120px;
     }
 
     main {
@@ -379,15 +372,17 @@
       }
 
       header {
-        align-items: start;
         flex-direction: column;
         margin-bottom: 22px;
       }
 
       .date-card {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 90px 120px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         width: 100%;
+      }
+
+      .date-field:first-child {
+        grid-column: 1 / -1;
       }
 
       .date-card span {
@@ -395,11 +390,6 @@
       }
 
       .date-card input {
-        width: 100%;
-      }
-
-      .date-field:nth-child(2) input,
-      .date-field:last-child select {
         width: 100%;
       }
 
@@ -451,10 +441,25 @@
           <input id="datePicker" type="date" aria-label="Chọn ngày tạo link">
         </div>
         <div class="date-field">
+          <label for="languagePicker">
+            <span>Ngôn ngữ</span>
+          </label>
+          <select id="languagePicker" aria-label="Chọn ngôn ngữ story">
+            <option value="en" selected>Tiếng Anh</option>
+            <option value="es-MX">Mexico</option>
+          </select>
+        </div>
+        <div class="date-field">
+          <label for="storyCountPicker">
+            <span>Số story mỗi Nick</span>
+          </label>
+          <input id="storyCountPicker" type="number" min="1" max="100" step="1" value="16" inputmode="numeric" aria-label="Số story mỗi Nick">
+        </div>
+        <div class="date-field">
           <label for="postCountPicker">
             <span>Số bài mỗi đề</span>
           </label>
-          <input id="postCountPicker" type="number" min="1" max="20" value="3" inputmode="numeric" aria-label="Số bài mỗi đề">
+          <input id="postCountPicker" type="number" min="1" max="20" value="2" inputmode="numeric" aria-label="Số bài mỗi đề">
         </div>
         <div class="date-field">
           <label for="idxFilter">
@@ -476,7 +481,7 @@
       <section class="content">
         <div class="list-header">
           <h2 id="listTitle">Link của Nick 1</h2>
-          <span class="count" id="linkCount">15 links</span>
+          <span class="count" id="linkCount">16 links</span>
         </div>
         <div class="link-list" id="linkList" aria-live="polite"></div>
       </section>
@@ -487,11 +492,22 @@
 
   <script>
     const BASE_URL = "https://heartfeltfamilystory.danhngon.pro/blog";
-    const LINK_PREFIXES = [
-      "Full story 👇",
-      "What happened next 👇",
-      "Keep reading 👇"
-    ];
+    // Group order from video_done/asetting.txt: patch1 = Nick 1, patch2 = Nick 2.
+    const NICK_GROUP_IDS = {
+      1: [1, 2, 3, 4, 5, 11, 13, 15],
+      2: [6, 7, 8, 9, 10, 12, 14, 16]
+    };
+    const LAST_CONFIGURED_GROUP_ID = Math.max(...Object.values(NICK_GROUP_IDS).flat());
+    const LANGUAGE_CONTENT = {
+      en: {
+        prefixes: ["Full story 👇", "What happened next 👇", "Keep reading 👇"],
+        pinnedComment: "📌 Check the pinned comment for the full story! 😉👇"
+      },
+      "es-MX": {
+        prefixes: ["Historia completa 👇", "Lo que pasó después 👇", "Sigue leyendo 👇"],
+        pinnedComment: "📌 ¡Lee la historia completa en el comentario fijado! 😉👇"
+      }
+    };
     const today = new Date();
     const day = String(today.getDate()).padStart(2, "0");
     const month = String(today.getMonth() + 1).padStart(2, "0");
@@ -501,6 +517,8 @@
     const listTitle = document.getElementById("listTitle");
     const toast = document.getElementById("toast");
     const datePicker = document.getElementById("datePicker");
+    const languagePicker = document.getElementById("languagePicker");
+    const storyCountPicker = document.getElementById("storyCountPicker");
     const postCountPicker = document.getElementById("postCountPicker");
     const idxFilter = document.getElementById("idxFilter");
     const linkCount = document.getElementById("linkCount");
@@ -517,19 +535,24 @@
     }
 
     function createLinks(nick) {
-      const start = nick === 1 ? 1 : 6;
-      const postCount = Math.max(1, Math.min(20, Number(postCountPicker.value) || 3));
+      const storyCount = getCount(storyCountPicker, 16);
+      const postCount = getCount(postCountPicker, 2);
+      const groupIds = NICK_GROUP_IDS[nick];
+      const prefixes = LANGUAGE_CONTENT[languagePicker.value].prefixes;
       const links = [];
 
-      for (let titleNumber = start; titleNumber < start + 5; titleNumber += 1) {
-        for (let variant = 1; variant <= postCount; variant += 1) {
-          links.push({
-            title: `Life Hidden Truth ${titleNumber}`,
-            url: `${BASE_URL}/life-hidden-truth-${titleNumber}-${getDateForUrl()}-${variant}`,
-            idx: variant,
-            prefix: LINK_PREFIXES[Math.floor(Math.random() * LINK_PREFIXES.length)]
-          });
-        }
+      for (let storyIndex = 0; storyIndex < storyCount; storyIndex += 1) {
+        const groupIndex = Math.floor(storyIndex / postCount);
+        // Additional groups alternate between Nicks after the configured IDs.
+        const titleNumber = groupIds[groupIndex]
+          ?? LAST_CONFIGURED_GROUP_ID + (groupIndex - groupIds.length) * 2 + nick;
+        const variant = storyIndex % postCount + 1;
+        links.push({
+          title: `Life Hidden Truth ${titleNumber}`,
+          url: `${BASE_URL}/life-hidden-truth-${titleNumber}-${getDateForUrl()}-${variant}`,
+          idx: variant,
+          prefix: prefixes[Math.floor(Math.random() * prefixes.length)]
+        });
       }
 
       return links;
@@ -545,7 +568,7 @@
       links.forEach((link, index) => {
         const item = document.createElement("article");
         item.className = "link-item";
-        item.style.animationDelay = `${index * 22}ms`;
+        item.style.animationDelay = `${Math.min(index, 20) * 22}ms`;
 
         const title = document.createElement("div");
         title.className = "title";
@@ -593,7 +616,7 @@
       }
       button.classList.add("copied");
       window.setTimeout(() => {
-        button.textContent = originalText;
+        button.textContent = button.dataset.originalText;
         button.classList.remove("copied");
       }, 1400);
 
@@ -621,6 +644,22 @@
       button.addEventListener("click", () => copyLink(button.dataset.copyText, button));
     });
 
+    function updateQuickCopyTexts() {
+      const language = LANGUAGE_CONTENT[languagePicker.value];
+      const texts = [...language.prefixes, language.pinnedComment];
+      quickCopyButtons.forEach((button, index) => {
+        button.textContent = texts[index];
+        button.dataset.copyText = texts[index];
+        button.dataset.originalText = texts[index];
+        button.classList.remove("copied");
+      });
+    }
+
+    languagePicker.addEventListener("change", () => {
+      updateQuickCopyTexts();
+      renderLinks(selectedNick);
+    });
+
     datePicker.addEventListener("change", () => {
       if (datePicker.value) {
         renderLinks(selectedNick);
@@ -628,9 +667,20 @@
     });
 
     postCountPicker.addEventListener("change", () => {
-      const postCount = Math.max(1, Math.min(20, Number(postCountPicker.value) || 3));
+      const postCount = getCount(postCountPicker, 2);
       postCountPicker.value = String(postCount);
       updateIdxFilter(postCount);
+      renderLinks(selectedNick);
+    });
+
+    function getCount(picker, fallback) {
+      const value = Number(picker.value);
+      return Math.max(Number(picker.min), Math.min(Number(picker.max),
+        Number.isFinite(value) && picker.value !== "" ? Math.trunc(value) : fallback));
+    }
+
+    storyCountPicker.addEventListener("change", () => {
+      storyCountPicker.value = String(getCount(storyCountPicker, 16));
       renderLinks(selectedNick);
     });
 
@@ -655,6 +705,7 @@
 
     idxFilter.addEventListener("change", () => renderLinks(selectedNick));
 
+    updateQuickCopyTexts();
     updateIdxFilter(Number(postCountPicker.value));
     renderLinks(1);
   </script>
