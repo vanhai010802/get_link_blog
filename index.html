@@ -453,7 +453,7 @@
           <label for="storyCountPicker">
             <span>Số story mỗi Nick</span>
           </label>
-          <input id="storyCountPicker" type="number" min="1" max="100" step="1" value="16" inputmode="numeric" aria-label="Số story mỗi Nick">
+          <input id="storyCountPicker" type="number" min="1" max="100" step="1" value="18" inputmode="numeric" aria-label="Số story mỗi Nick">
         </div>
         <div class="date-field">
           <label for="postCountPicker">
@@ -481,7 +481,7 @@
       <section class="content">
         <div class="list-header">
           <h2 id="listTitle">Link của Nick 1</h2>
-          <span class="count" id="linkCount">16 links</span>
+          <span class="count" id="linkCount">18 links</span>
         </div>
         <div class="link-list" id="linkList" aria-live="polite"></div>
       </section>
@@ -492,12 +492,13 @@
 
   <script>
     const BASE_URL = "https://heartfeltfamilystory.danhngon.pro/blog";
-    // Group order from video_done/asetting.txt: patch1 = Nick 1, patch2 = Nick 2.
-    const NICK_GROUP_IDS = {
-      1: [1, 2, 3, 4, 5, 11, 13, 15],
-      2: [6, 7, 8, 9, 10, 12, 14, 16]
+    // Explicit story rows in video_done/asetting.txt: patch1 = Nick 1, patch2 = Nick 2.
+    // Legacy patch summary rows no longer determine the story counts.
+    const NICK_SETTINGS = {
+      1: { storyCount: 18, groupIds: [1, 2, 3, 4, 5, 11, 13, 15, 17] },
+      2: { storyCount: 22, groupIds: [6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 30] }
     };
-    const LAST_CONFIGURED_GROUP_ID = Math.max(...Object.values(NICK_GROUP_IDS).flat());
+    const LAST_CONFIGURED_GROUP_ID = Math.max(...Object.values(NICK_SETTINGS).flatMap(settings => settings.groupIds));
     const LANGUAGE_CONTENT = {
       en: {
         prefixes: ["Full story 👇", "What happened next 👇", "Keep reading 👇"],
@@ -524,10 +525,12 @@
     const linkCount = document.getElementById("linkCount");
     const tabs = document.querySelectorAll(".tab");
     const quickCopyButtons = document.querySelectorAll(".quick-copy-button");
+    const storyCounts = Object.fromEntries(Object.entries(NICK_SETTINGS).map(([nick, settings]) => [nick, settings.storyCount]));
     let selectedNick = 1;
     let toastTimer;
 
     datePicker.value = `${year}-${month}-${day}`;
+    storyCountPicker.value = String(storyCounts[selectedNick]);
 
     function getDateForUrl() {
       const [selectedYear, selectedMonth, selectedDay] = datePicker.value.split("-");
@@ -535,9 +538,9 @@
     }
 
     function createLinks(nick) {
-      const storyCount = getCount(storyCountPicker, 16);
+      const storyCount = getCount(storyCountPicker, NICK_SETTINGS[nick].storyCount);
       const postCount = getCount(postCountPicker, 2);
-      const groupIds = NICK_GROUP_IDS[nick];
+      const groupIds = NICK_SETTINGS[nick].groupIds;
       const prefixes = LANGUAGE_CONTENT[languagePicker.value].prefixes;
       const links = [];
 
@@ -631,6 +634,7 @@
     tabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         selectedNick = Number(tab.dataset.nick);
+        storyCountPicker.value = String(storyCounts[selectedNick]);
         tabs.forEach((item) => {
           const isActive = item === tab;
           item.classList.toggle("active", isActive);
@@ -680,7 +684,8 @@
     }
 
     storyCountPicker.addEventListener("change", () => {
-      storyCountPicker.value = String(getCount(storyCountPicker, 16));
+      storyCounts[selectedNick] = getCount(storyCountPicker, NICK_SETTINGS[selectedNick].storyCount);
+      storyCountPicker.value = String(storyCounts[selectedNick]);
       renderLinks(selectedNick);
     });
 
