@@ -453,7 +453,7 @@
           <label for="storyCountPicker">
             <span>Số story mỗi Nick</span>
           </label>
-          <input id="storyCountPicker" type="number" min="1" max="100" step="1" value="18" inputmode="numeric" aria-label="Số story mỗi Nick">
+          <input id="storyCountPicker" type="number" min="1" max="100" step="1" value="20" inputmode="numeric" aria-label="Số story mỗi Nick">
         </div>
         <div class="date-field">
           <label for="postCountPicker">
@@ -481,7 +481,7 @@
       <section class="content">
         <div class="list-header">
           <h2 id="listTitle">Link của Nick 1</h2>
-          <span class="count" id="linkCount">18 links</span>
+          <span class="count" id="linkCount">20 links</span>
         </div>
         <div class="link-list" id="linkList" aria-live="polite"></div>
       </section>
@@ -495,8 +495,8 @@
     // Explicit story rows in video_done/asetting.txt: patch1 = Nick 1, patch2 = Nick 2.
     // Legacy patch summary rows no longer determine the story counts.
     const NICK_SETTINGS = {
-      1: { storyCount: 18, groupIds: [1, 2, 3, 4, 5, 11, 13, 15, 17] },
-      2: { storyCount: 22, groupIds: [6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 30] }
+      1: { storyCount: 20, groupIds: [1, 2, 3, 4, 5, 11, 13, 15, 17, 19] },
+      2: { storyCount: 26, groupIds: [6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 21, 30, 31] }
     };
     const LAST_CONFIGURED_GROUP_ID = Math.max(...Object.values(NICK_SETTINGS).flatMap(settings => settings.groupIds));
     const LANGUAGE_CONTENT = {
